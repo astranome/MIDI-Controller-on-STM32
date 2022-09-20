@@ -1,7 +1,11 @@
 //astra@astra.org.ru
 
+///// https://github.com/astranome/MIDI-Controller-on-STM32 /////
 #include <Arduino.h>
 #include <USBComposite.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C_STM32.h> // https://github.com/lightcalamar/LiquidCrystal_I2C_STM32
+LiquidCrystal_I2C_STM32 lcd(0x3E, 16, 2);  // Устанавливаем дисплей
 
 USBMIDI midi;
 // Pin Definitions //
@@ -12,7 +16,7 @@ const uint8 pot_pin1 = 1;
 const uint8 pot_pin2 = 2;
 const uint8 pot_pin3 = 3;
 const uint8 pot_pin4 = 4;
-const int selectPins[3] = {9, 6, 7}; // S0~2, S1~3, S2~4
+const int selectPins[3] = {9, 6, 7}; // S0~PA9, S1~PA6, S2~PA7
 const uint8 zInput = PB1; //A11; // Connect common (Z) to B1 (analog input)
 const uint8 BUTTON1 = PB3; //1
 const uint8 BUTTON2 = PB4; //2
@@ -91,6 +95,16 @@ pinMode(zInput, INPUT); // Set up Z as an input
    
   midi.begin();
   delay(1000);
+  //-------------- Init display ----------------
+  lcd.begin();                    
+  lcd.backlight();// Включаем подсветку дисплея
+  lcd.print(" MIDI Controller ");
+  lcd.setCursor(0, 1);
+  lcd.print("    LCD 1602    ");
+  delay(1500);
+  lcd.noBacklight();// Выключаем подсветку дисплея
+  delay(100);
+  lcd.backlight();// Включаем подсветку дисплея
 }
 
 void loop() {
@@ -147,6 +161,11 @@ void loop() {
       new_valMux6 < old_valMux6 && old_valMux6 - new_valMux6 > threshold) {
 /////------------ sending a midi CC command ----------------
     midi.sendControlChange(midi_channel0, cc_command6, new_valMux6);
+    lcd.clear();
+    lcd.print("CH00 CC");
+    lcd.print(cc_command6);
+    lcd.print(" val ");
+    lcd.print(new_valMux6);
 
  //------------ Update old_value---------
     old_valMux6 = new_valMux6;
@@ -157,6 +176,12 @@ void loop() {
       new_valMux7 < old_valMux7 && old_valMux7 - new_valMux7 > threshold) {
 /////------------ sending a midi CC command ----------------
     midi.sendControlChange(midi_channel0, cc_command7, new_valMux7);
+    lcd.clear();
+    lcd.print("CH00 CC");
+    lcd.print(cc_command7);
+    lcd.print(" val ");
+    lcd.print(new_valMux7);
+
 
    
     //----------- Update old_value --------------
@@ -169,6 +194,12 @@ void loop() {
       new_value < old_value && old_value - new_value > threshold) {
 /////------------ sending a midi CC command ----------------
     midi.sendControlChange(midi_channel, cc_command, new_value);
+    lcd.clear();
+    lcd.print("CH06 CC");
+    lcd.print(cc_command);
+    lcd.print(" val ");
+    lcd.print(new_value);
+
 
     // Update old_value
     old_value = new_value;
@@ -179,6 +210,11 @@ void loop() {
       new_value0 < old_value0 && old_value0 - new_value0 > threshold) {
 
     midi.sendControlChange(midi_channel0, cc_command, new_value0);
+    lcd.clear();
+    lcd.print("CH01 CC");
+    lcd.print(cc_command);
+    lcd.print(" val ");
+    lcd.print(new_value0);
 
     // Update old_value
     old_value0 = new_value0;
@@ -188,6 +224,11 @@ void loop() {
       new_value1 < old_value1 && old_value1 - new_value1 > threshold) {
 
     midi.sendControlChange(midi_channel1, cc_command, new_value1);
+    lcd.clear();
+    lcd.print("CH02 CC");
+    lcd.print(cc_command);
+    lcd.print(" val ");
+    lcd.print(new_value1);
 
     // Update old_value
     old_value1 = new_value1;
@@ -197,6 +238,11 @@ void loop() {
       new_value2 < old_value2 && old_value2 - new_value2 > threshold) {
 
     midi.sendControlChange(midi_channel2, cc_command, new_value2);
+    lcd.clear();
+    lcd.print("CH03 CC");
+    lcd.print(cc_command);
+    lcd.print(" val ");
+    lcd.print(new_value3);
 
     // Update old_value
     old_value2 = new_value2;
@@ -206,6 +252,11 @@ void loop() {
       new_value3 < old_value3 && old_value3 - new_value3 > threshold) {
 
     midi.sendControlChange(midi_channel3, cc_command, new_value3);
+    lcd.clear();
+    lcd.print("CH04 CC");
+    lcd.print(cc_command);
+    lcd.print(" val ");
+    lcd.print(new_value3);
 
     // Update old_value
     old_value3 = new_value3;
@@ -215,6 +266,11 @@ void loop() {
       new_value4 < old_value4 && old_value4 - new_value4 > threshold) {
 
     midi.sendControlChange(midi_channel4, cc_command, new_value4);
+    lcd.clear();
+    lcd.print("CH05 CC");
+    lcd.print(cc_command);
+    lcd.print(" val ");
+    lcd.print(new_value4);
 
     // Update old_value
     old_value4 = new_value4;
@@ -257,6 +313,9 @@ void button1Handler() {
     //Serial.println("Button 1 is pressed");
 //-------- Sending Realtime category messages -----------    
     midi.sendStart();
+    lcd.clear();
+    lcd.print("Start");
+    
   } 
   }
 
@@ -267,6 +326,8 @@ void button2Handler() {
   if (buttonState2 == HIGH) {
     //Serial.println("Button 2 is pressed");
     midi.sendStop();
+    lcd.clear();
+    lcd.print("Stop");
   } 
 }
 
@@ -278,6 +339,8 @@ void button3Handler() {
     //Serial.println("Button 3 is pressed");
 //-------- Sending Realtime category messages -----------        
     midi.sendContinue();
+    lcd.clear();
+    lcd.print("Cont");
   } 
 }
   
