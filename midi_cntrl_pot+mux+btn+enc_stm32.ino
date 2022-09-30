@@ -15,7 +15,7 @@ USBMIDI midi;
 #define PIN_B            PB14  //ky-040 dt  pin, add 100nF/0.1uF capacitors between pin & ground!!!
 #define BUTTON           PB15  //ky-040 sw  pin, add 100nF/0.1uF capacitors between pin & ground!!!
 //RotaryEncoder     encoder(PIN_A, PIN_B, BUTTON);
-RotaryEncoderAdvanced<int> encoder(PIN_A, PIN_B, BUTTON, 1, 0, 12); //1 step per click, minimum value 0, maximum value 12
+RotaryEncoderAdvanced<int> encoder(PIN_A, PIN_B, BUTTON, 1, 0, 12); //это, похоже, не работает, смотрите 99 и 100 строки...
 const uint8 pot_pin = 5;
 const uint8 pot_pin0 = 0;
 const uint8 pot_pin1 = 1;
