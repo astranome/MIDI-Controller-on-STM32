@@ -1,27 +1,36 @@
 //astra@astra.org.ru
-
-///// https://github.com/astranome/MIDI-Controller-on-STM32 /////
 #include <Arduino.h>
 #include <USBComposite.h>
 #include <Wire.h> 
-#include <LiquidCrystal_I2C_STM32.h> // https://github.com/lightcalamar/LiquidCrystal_I2C_STM32
+//#include <RotaryEncoder.h>
+#include <RotaryEncoderAdvanced.h>
+
+#include <LiquidCrystal_I2C_STM32.h> // liquidcrystali2c.zip
 LiquidCrystal_I2C_STM32 lcd(0x3E, 16, 2);  // Устанавливаем дисплей
 
 USBMIDI midi;
 // Pin Definitions //
 /////////////////////////////////
+#define PIN_A            PB13  //ky-040 clk pin, add 100nF/0.1uF capacitors between pin & ground!!!
+#define PIN_B            PB14  //ky-040 dt  pin, add 100nF/0.1uF capacitors between pin & ground!!!
+#define BUTTON           PB15  //ky-040 sw  pin, add 100nF/0.1uF capacitors between pin & ground!!!
+//RotaryEncoder     encoder(PIN_A, PIN_B, BUTTON);
+RotaryEncoderAdvanced<int> encoder(PIN_A, PIN_B, BUTTON, 1, 0, 12); //1 step per click, minimum value 0, maximum value 12
 const uint8 pot_pin = 5;
 const uint8 pot_pin0 = 0;
 const uint8 pot_pin1 = 1;
 const uint8 pot_pin2 = 2;
 const uint8 pot_pin3 = 3;
 const uint8 pot_pin4 = 4;
-const int selectPins[3] = {9, 6, 7}; // S0~PA9, S1~PA6, S2~PA7
+const int selectPins[3] = {9, 6, 7}; // S0~2, S1~3, S2~4
 const uint8 zInput = PB1; //A11; // Connect common (Z) to B1 (analog input)
 const uint8 BUTTON1 = PB3; //1
 const uint8 BUTTON2 = PB4; //2
 const uint8 BUTTON3 = PB5; //3
 
+/////////////init variables//////////////////
+
+uint16_t buttonCounter = 0;
 unsigned int Val = 0;
 unsigned int Val_7 = 0;
 unsigned int Val_6 = 0;
@@ -50,6 +59,12 @@ const unsigned int cc_command6 = 71; // bank select command 0
 const unsigned int cc_command7 = 74; // bank select command 0
 
 
+int encold = 0;
+int8_t  cw_ccw_idle     = 0; //1=CW, 0=idle, -1=CCW, 
+int16_t encoderPosition = 0; //encoder click counter, limit -32768..32767
+
+
+
 unsigned int old_value = 0;
 unsigned int new_value = 0;
 unsigned int old_value0 = 0;
@@ -66,11 +81,25 @@ unsigned int old_valMux6 = 0;
 unsigned int new_valMux6 = 0;
 unsigned int old_valMux7 = 0;
 unsigned int new_valMux7 = 0;
+void encoderISR()
+{
+  encoder.readAB();
+}
 
+void encoderButtonISR()
+{
+  encoder.readPushButton();
+}
 void setup() {
  Serial.begin(9600); // Initialize the serial port
   // product id taken from library example
   USBComposite.setProductId(0x0031);
+ encoder.begin();                                                           //set encoders pins as input & enable built-in pullup resistors
+
+  attachInterrupt(digitalPinToInterrupt(PIN_A),  encoderISR,       CHANGE);  //call encoderISR()    every high->low or low->high changes
+  attachInterrupt(digitalPinToInterrupt(PIN_B),  encoderISR,       FALLING);  //call encoderISR()    every high->low or low->high changes
+  attachInterrupt(digitalPinToInterrupt(BUTTON), encoderButtonISR, FALLING); //call pushButtonISR() every high->low              changes
+ 
   
    pinMode(pot_pin, INPUT);
    pinMode(pot_pin0, INPUT);
@@ -92,6 +121,8 @@ digitalWrite(selectPins[i], HIGH);
 }
 
 pinMode(zInput, INPUT); // Set up Z as an input
+
+
    
   midi.begin();
   delay(1000);
@@ -118,7 +149,7 @@ void loop() {
   buttonState1 = digitalRead(BUTTON1);
   buttonState2 = digitalRead(BUTTON2);
   buttonState3 = digitalRead(BUTTON3);
-
+  //int encpos = encoder.getPosition();
 
   
   new_value = temp / 32;          // convert to a value between 0-127
@@ -128,6 +159,24 @@ void loop() {
   new_value3 = temp3 / 32;          // convert to a value between 0-127
   new_value4 = temp4 / 32;
 ////////////////////////////////////////////////////////////////////////////////
+  //if (encpos != encold) 
+  if (encoderPosition != encoder.getPosition())
+  {
+    encoderPosition = encoder.getPosition();
+
+  
+    //midi.sendControlChange(midi_channel0, cc_command7, new_valMux7);
+    midi.sendProgramChange(0, encoderPosition);
+    lcd.clear();
+    lcd.print("CH1");
+    lcd.print("--");
+    lcd.print(" prog ");
+    lcd.print(encoderPosition);
+  
+    //----------- Update old_value --------------
+//    encold  = encpos;
+  }
+
   if (buttonState1 != buttonPrevState1) {
     button1Handler();  ///////////// Detecting pressing or releasing the button
   }
@@ -279,7 +328,7 @@ void loop() {
 
   
   // Wait 50ms before reading the pin again
-  delay(50);
+  delay(5);
 }
 
 // The selectMuxPin function sets the S0, S1, and S2 pins
